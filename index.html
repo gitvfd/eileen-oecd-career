@@ -1,0 +1,392 @@
+<!doctype html>
+<html>
+<meta charset="utf-8">
+
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <script src="libs/d3.v4.min.js"></script> 
+    <script src="libs/d3-area-label.js"></script>
+</head>
+<body id="page">
+    <div id="chart"></div>
+    <div id="footer">
+        <img id="logo" src="icon/logo-20YEARS-EN_White.png"></img>
+        <div id="yearDisplayed">&nbsp;</div>
+        
+        <Br/>
+        <!--<div id="oecdForum">What was the #OECDForum focusing on?</div>-->
+        <div class="worldEvent"> <h3 id="worldEventText">&nbsp;</h3></div><Br />
+    </div>
+    
+</body>
+
+<script>
+   
+    var timer=2500;
+    var forumTitles=[]
+
+    var worldEvents=[]
+
+    var themeList=[];
+    
+    d3.tsv("data/forumTheme.tsv", function (error, fora) {
+        fora.forEach(function (d) {
+            forumTitles.push(d)
+        })
+    });
+
+    d3.tsv("data/events.tsv", function (error, happened) {
+        happened.forEach(function (d) {
+            worldEvents.push(d)
+        })
+    });
+
+    var widthScreen = window.innerWidth;
+    //var widthScreen =8064
+    var heightScreen=window.innerHeight - 0.15*window.innerWidth *172/414 - 0.015 * window.innerHeight;
+    //var heightScreen=1344
+    
+    var margin = { top: 0.05*window.innerHeight, right: 0.04 * window.innerWidth, bottom: 0.025 * window.innerHeight, left: 0.0 * window.innerWidth };
+       
+    var z=d3.scaleOrdinal()
+         .range(['#000060', '#000065', '#01006b', '#03006f', '#060074', '#0a007a', '#0f007e', '#140082', '#180087', '#1e008b', '#23008e', '#280092', '#2d0095', '#330098', '#38009c', '#3d009e', '#4300a0', '#4800a2', '#4e00a4', '#5400a5', '#5a00a7', '#6000a8', '#6500a8', '#6b00a8', '#7200a8', '#7800a8', '#7e00a7', '#8400a6', '#8900a4', '#8f00a2', '#97009f', '#9d009c', '#a20099', '#a90295', '#ae0591', '#b3098d', '#b90d88', '#bd1183', '#c3157d', '#c71978', '#cc1c72', '#d1206b', '#d52465', '#d9285e', '#dd2b56', '#e12e4f', '#e53247', '#e93540', '#ec3937', '#f03c2e'])
+         //.domain(["Cities",   "Corporate Governance", "Corporate Responsibility", "Corruption",  "Democracy", "Civic Engagement", "Populism", "Governance", "Integrity/Trust","Development",  "Economy", "Education", "Skills", "Jobs", "Energy", "Entrepreneurship",  "Finance", "Financial Crisis", "Food/Agriculture", "Gender", "Globalisation",  "Sustainable Development", "Environment", "Climate Change", "Green Growth","Health", "Housing", "Inequality", "Infrastructure",   "International Co-operation", "Technology/Science", "Internet", "Innovation", "Digitalisation","AI", "Investment", "Media", "Migration", "New Economy", "Digital Economy",  "Partnerships",  "Poverty", "Security", "Services", "Society",  "Taxes", "Terrorism", "Trade", "Transport", "Well-Being"]);
+        .domain(["Transport", "Infrastructure", "Cities", "Housing", "Energy", "Environment", "Green Growth", "Climate Change", "Globalisation", "Trade", "Terrorism", "Security", "Development", "Poverty", "Food/Agriculture", "Health", "Inequality", "Ageing", "Migration", "Gender", "Education", "Jobs", "Skills", "Entrepreneurship", "Services", "Economy", "Corporate Governance", "Taxes", "Corruption", "Financial Crisis", "Finance", "Investment", "New Economy", "Digital Economy", "Digitalisation", "Internet", "Technology/Science", "AI", "Innovation", "Media", "Civic Engagement", "Democracy", "Populism", "Governance", "Integrity/Trust", "International Co-operation", "Partnerships", "Sustainable Development", "Society", "Well-Being"])
+     
+    var svg = d3.select("#chart")
+        .append("svg").attr("width", widthScreen).attr("height", heightScreen)
+ 
+    var paths ;
+       // Find the min and max year, then give the
+        // full range of years between them.
+        function computeYears(rawData) {
+            var allYearsSet = d3.set();
+            rawData.forEach(function (d) {
+                d.values.forEach(function (d) {
+                    allYearsSet.add(d.key);
+                });
+            });
+            var yearsExtent = d3.extent(allYearsSet
+                .values()
+                .map(function (yearStr) {
+                    return +yearStr;
+                }));
+            return d3
+                .range(yearsExtent[0], yearsExtent[1] + 1)
+                .map(function (year) {
+                    return new Date(year + "");
+                });
+        }
+
+        var bisectDate = d3.bisector(function (d) {
+            return d.date;
+        }).left;
+
+        function getInterpolatedValue(values, date, value) {
+            const i = bisectDate(values, date, 0, values.length - 1);
+            if (i > 0) {
+                const a = values[i - 1];
+                const b = values[i];
+                const t = (date - a.date) / (b.date - a.date);
+                return value(a) * (1 - t) + value(b) * t;
+            }
+            return value(values[i]);
+        }
+
+        // Interpolate values, create data structure
+        // for d3.stack.
+        function interpolateValues(years, rawData) {
+            var value = function (d) {
+                return d.value;
+            };
+            return years.map(function (date) {
+
+                // Create a new row object with the date.
+                var row = {
+                    date: date
+                };
+
+                // Assign values to the new row object for each key.
+                // Value for `key` here will be country name.
+                rawData.forEach(function (d) {
+                    row[d.key] = getInterpolatedValue(d.values, date, value);
+                });
+
+                return row;
+            });
+        }
+
+        d3.json('data/data.json', function (rawData) {
+            //list all themes for rolling highlight feature
+            themeList= rawData.map(function (d) {
+                return d.key;
+            });
+
+            // Parse dates, extract keys.
+            var keys = rawData
+                .filter(function (d) {
+                    var sum = d3.sum(d.values, function (d) { return d.value; });
+                    return sum > 0;
+                })
+                .map(function (d) {
+                    d.values.forEach(function (d) {
+                        d.date = new Date(d.key);
+                    });
+                    return d.key;
+                });
+
+            // Compute interpolated values for all years.
+            var data = interpolateValues(computeYears(rawData), rawData);
+
+            render(data, keys);
+        });
+
+        var width = +svg.attr('width');
+        var height = +svg.attr('height');
+
+        var g = svg.append('g')
+            .attr('transform', "translate(" + margin.left + " " + margin.top + ")");
+
+
+        var xAxisG = g.append('g')
+            .attr('class', 'axis');
+            
+        var xAxisMajorG = xAxisG.append('g')
+            .attr('class', 'axis axis--major');
+
+
+        var marksG = g.append('g');
+
+        var stack = d3.stack()
+            .offset(d3.stackOffsetWiggle)
+            //.order(d3.stackOrderInsideOut)
+            ;
+        var xValue = function (d) { return d.date; };
+        var xScale = d3.scaleTime();
+        var yScale = d3.scaleLinear();
+       
+       
+
+        var xAxisMajor = d3.axisTop().scale(xScale).ticks(20);
+
+       
+        var area = d3.area()
+            .x(d => xScale(xValue(d.data)))
+            .y0(d => yScale(d[0]))
+            .y1(d => yScale(d[1]))
+            .curve(d3.curveBasis);
+
+    ///////////////////////////////
+   //position Title to be refined//
+    ///////////////////////////////
+    var title = g.append('text')
+        .attr("class", "title")
+        .attr('dx',xScale(new Date("Mar 01, 2000")))
+        .attr('dy',0.33* height/4 )
+        .text("20 years of #OECDForum")
+       // .attr("fill", "#000092")
+
+       
+        // Render StreamGraph
+        function render(data, keys) {
+            stack.keys(keys);
+            var stacked = stack(data);
+
+            var innerWidth = width - margin.right - margin.left;
+            var innerHeight = height - margin.top - margin.bottom;
+
+            xScale
+                .domain(d3.extent(data, xValue))
+                .range([0, innerWidth]) ;
+
+            yScale
+                .domain([
+                    d3.min(stacked, function (series) {
+                        return d3.min(series, function (d) { return d[0]; });
+                    }),
+                    d3.max(stacked, function (series) {
+                        return d3.max(series, function (d) { return d[1]; });
+                    })
+                ])
+                .range([innerHeight, 0]);
+
+
+            ///////////////////////////////
+            //Invisible Rect for mouseover //
+            ///////////////////////////////
+            svg.selectAll("rect")
+                .data(["2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019"])
+                .enter()
+                .append("rect")
+                .attr("x", function (d) {return (xScale(new Date(d))- xScale(new Date("2001"))/2 )})
+                .attr("y", 0)
+                .attr("width", width / 20)
+                .attr("height", 0.33 * height / 5).attr("fill", "#ffffff")
+                .style("opacity",0)
+                .on("mouseover", function (d) {
+                
+                    var ev2Disp = worldEvents.filter(function(k){ return k.Year==d;})
+                    var tit2Disp = forumTitles.filter(function (k) { return k.Year == d; })
+
+                    tooltip.html("Forum "+d+": <b>" + tit2Disp[0].Forum + "</b><br><br>In the world: <br><i>" + ev2Disp[0].Events +"</i>") ;
+                     tooltip.style("visibility", "visible");
+                })
+                .on("mousemove", mousemove)
+                .on("mouseout", mouseout);
+
+
+
+
+
+            var paths = marksG.selectAll('path').data(stacked);
+            var pathsEnter = paths
+                .enter().append('path');
+            pathsEnter.merge(paths)
+                .attr("class", "waves")
+                .attr("id", function (d) { return d.key.replace(/ /g, '_').replace(/[^a-zA-Z 0-9]+/g, '_') + "_path"; })
+                .attr('fill', function (d) {return z(d.key); })
+                .attr('stroke', function (d) { return z(d.key); })
+                .attr('d', area)
+                .on("mouseover", function (d) {
+                    tooltip.html(d.key);
+                    tooltip.style("visibility", "visible");
+                })
+                .on("mousemove", mousemove)
+                .on("mouseout", mouseout);
+
+            paths.select('title')
+                .merge(pathsEnter.append('title'))
+                .text(function (d) { return d.key; })
+
+            var labels = marksG.selectAll('text').data(stacked)
+            labels
+                .enter().append('text')
+                .attr('class', 'area-label')
+                .attr('id', function (d) { return d.key.replace(/ /g, '_').replace(/[^a-zA-Z 0-9]+/g, '_')+"_label"; })
+                .merge(labels)
+                .text(function (d) { return d.key; })
+                .attr('transform', d3.areaLabel(area).interpolateResolution(1000));
+
+
+            xAxisMajor.tickSize(-innerHeight);
+
+            xAxisG.attr('transform', `translate(0,-10)`);
+            xAxisMajorG.call(xAxisMajor);
+            
+
+
+            
+
+ 
+        }
+
+        //Rolling feature Events and forum titles
+        var counter=0;
+        window.setInterval(function(){
+
+            document.getElementById("yearDisplayed").innerHTML = " Forum "+ forumTitles[counter].Year +": " + forumTitles[counter].Forum ;
+            
+           // document.getElementById("oecdForum").innerHTML= "#OECDForum: " +forumTitles[counter].Forum  ;
+            document.getElementById("worldEventText").innerHTML = "In "+ forumTitles[counter].Year  + ": "+ worldEvents[counter].Events;
+            counter++;   
+            if(counter== forumTitles.length)
+                counter=0 
+        },30000);
+
+
+
+        //Rolling feature highlightTheme
+        var countTheme=0;
+        window.setInterval(function () {
+
+            var pickedThemePath= "#"+themeList[countTheme].replace(/ /g, '_').replace(/[^a-zA-Z 0-9]+/g, '_')+"_path";
+            var pickedThemeLabel = "#"+themeList[countTheme].replace(/ /g, '_').replace(/[^a-zA-Z 0-9]+/g, '_') + "_label";
+            var colorPath= document.getElementById(themeList[countTheme].replace(/ /g, '_').replace(/[^a-zA-Z 0-9]+/g, '_') + "_path").getAttribute("fill");
+
+
+            // Change path color
+            d3.select(pickedThemePath)
+                .attr('fill', "#009228") //previously #272727
+            setTimeout(function(){
+                d3.select(pickedThemePath)
+                    .attr('fill', colorPath)
+            }, timer-1)
+
+
+            // Change text size 
+            var originPos= d3.select(pickedThemeLabel).attr("transform")
+            var translatePos= d3.select(pickedThemeLabel).attr("transform").replace(', ', ',').split(' ')[0]
+            var scalePos = d3.select(pickedThemeLabel).attr("transform").replace(', ', ',').split(' ')[1]
+            var scaleValue = scalePos.substring(6).replace(/[{()}]/g, '')
+
+            var multiplier;
+            if(parseFloat(scaleValue)<0.5)
+                multiplier=6
+            else if (parseFloat(scaleValue) < 0.75)
+                multiplier = 4
+            else if (parseFloat(scaleValue) < 1)
+                multiplier = 3
+            else if (parseFloat(scaleValue) < 2)
+                multiplier = 2
+            else if (parseFloat(scaleValue) >=2)
+                multiplier = 1.5
+              
+            //case where text is too close to right hand margin
+            var translatetemp= translatePos.substring(10).replace(')', '')
+
+            var translateX= translatetemp.split(',')[0]
+            var translateY= translatetemp.split(',')[1]
+
+            scaleValue=scaleValue.replace('(', '').split(',')[0]
+
+            if (translateX>0.8* widthScreen)
+                translateX=translateX- scaleValue* pickedThemeLabel.length*0.015* widthScreen;
+
+            //var newPos= translatePos + " scale(" + multiplier * parseFloat(scaleValue) +")";
+            var newPos = "translate("+translateX + ","+translateY + ") scale(" + multiplier * parseFloat(scaleValue) + ")";
+
+            d3.select(pickedThemeLabel)
+                .transition()
+                .duration(timer/2-1)
+                .ease(d3.easeElastic)
+                .attr("transform", newPos)
+                .attr("stroke","#c7c7c7")
+                .transition()
+                .duration(timer / 2 - 1)
+                .ease(d3.easeElastic)
+                //.ease(d3.easeBounce)
+                .attr("transform", originPos)
+                .attr("stroke", "none")
+
+            countTheme++;
+
+            if (countTheme == themeList.length)
+                countTheme = 0
+        }, timer);
+
+
+                
+
+         var tooltip = d3.select("#chart")
+                .append("div")
+                .style("position", "absolute")
+                .style("z-index", "20")
+                .style("visibility", "hidden")
+                .style("color", "#474747")
+                .style("padding", "8px")
+                .style("background-color", "#f0f0f0")
+                .style("border-radius", "3px")
+                .style("font", "11")
+                .style("font-family", 'Raleway')
+                .style("text-anchor", "middle")
+                .style("max-width", "300px")
+                .text("");
+
+            var mousemove = function () {
+                return tooltip.style("top", (d3.event.pageY - 10) + "px").style("left", (d3.event.pageX + 10) + "px");
+            }
+
+            var mouseout = function () { return tooltip.style("visibility", "hidden"); } 
+
+</script>

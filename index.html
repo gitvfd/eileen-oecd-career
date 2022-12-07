@@ -188,7 +188,7 @@
         .attr("class", "title")
         .attr('dx',xScale(new Date("Mar 01, 2000")))
         .attr('dy', height/4 )
-        .text("Eileen's 35 years at OECD")
+        .text("Eileen: 35 years at OECD")
        //.attr("fill", "#000092")
 
        
@@ -292,7 +292,7 @@
             document.getElementById("yearDisplayed").innerHTML = " Directorate "+ DirectorateTitles[counter].Year +": " + DirectorateTitles[counter].Directorate ;
             
            // document.getElementById("oecdDirectorate").innerHTML= "#OECDDirectorate: " +DirectorateTitles[counter].Directorate  ;
-            document.getElementById("worldEventText").innerHTML = "In "+ DirectorateTitles[counter].Year  + ": "+ worldEvents[counter].Events;
+            document.getElementById("worldEventText").innerHTML =  DirectorateTitles[counter].Year  + ": "+ worldEvents[counter].Events;
             counter++;   
             if(counter== DirectorateTitles.length)
                 counter=0 

@@ -32,14 +32,16 @@ text {
   display: none;
 }
 .title {
-  font-family: "Noto", Helvetica, Arial, sans-serif;
+  font-family: "Noto Sans", Helvetica, Arial, sans-serif;
   font-size: 3vw;
+  font-weight: 800;
   fill: #169b62;
+  text-decoration: underline;
 }
 #yearDisplayed {
-  font-family: "Raleway", Helvetica, Arial, sans-serif;
+  font-family: "Noto Sans", Helvetica, Arial, sans-serif;
   font-size: 1.5vw;
-  font-weight: 500;
+  font-weight: 800;
   color: #ffffff;
 }
 #oecdForum {
@@ -78,13 +80,13 @@ img#logo {
   position: relative;
 }
 .worldEvent h3 {
-  font-family: "Raleway", Helvetica, Arial, sans-serif;
-  font-size: 1vw;
+  font-family: "Noto Sans", Helvetica, Arial, sans-serif;
+  font-weight: 800;
+  font-size: 1.25vw;
   color: #ffffff;
   font-style: normal;
-  font-weight: 100;
   position: absolute;
-  width: 125%;
+  width: 100%;
   height: 100%;
   margin: 0;
   line-height: 50px;
@@ -94,14 +96,14 @@ img#logo {
   -webkit-transform: translateX(100%);
   transform: translateX(100%);
   /* Apply animation to this element */
-  -moz-animation: worldEvent 30s linear infinite;
-  -webkit-animation: worldEvent 30s linear infinite;
-  animation: worldEvent 30s linear infinite;
+  -moz-animation: worldEvent 12s linear infinite;
+  -webkit-animation: worldEvent 12s linear infinite;
+  animation: worldEvent 12s linear infinite;
 }
 /* Move it (define the animation) */
 @-moz-keyframes worldEvent {
   0% {
-    -moz-transform: translateX(100%);
+    -moz-transform: translateX(50%);
   }
   100% {
     -moz-transform: translateX(-100%);
@@ -109,7 +111,7 @@ img#logo {
 }
 @-webkit-keyframes worldEvent {
   0% {
-    -webkit-transform: translateX(100%);
+    -webkit-transform: translateX(50%);
   }
   100% {
     -webkit-transform: translateX(-100%);
@@ -117,9 +119,9 @@ img#logo {
 }
 @keyframes worldEvent {
   0% {
-    -moz-transform: translateX(100%); /* Firefox bug fix */
-    -webkit-transform: translateX(100%); /* Firefox bug fix */
-    transform: translateX(100%);
+    -moz-transform: translateX(50%); /* Firefox bug fix */
+    -webkit-transform: translateX(50%); /* Firefox bug fix */
+    transform: translateX(50%);
   }
   100% {
     -moz-transform: translateX(-100%); /* Firefox bug fix */

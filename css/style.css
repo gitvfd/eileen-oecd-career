@@ -58,20 +58,19 @@ text {
         
       }**/
 
-.footer {
+#footer {
   background: #ff883e;
   padding-top: 0%;
   padding-bottom: 0%;
   margin-bottom: 0.5%;
-  height: 125px;
+  height: 5%;
 }
 
-.footer img#logo {
+img#logo {
   float: left;
   margin-left: 0px;
   margin-right: 1%;
-  max-width: 20%;
-  max-height: 125px;
+  max-width: 15%;
 }
 
 .worldEvent {
